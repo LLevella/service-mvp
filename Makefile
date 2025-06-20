@@ -1,3 +1,4 @@
+DEBUG=y
 ifdef DEBUG
 	CFLAGS=-g -DDEBUG
 else
