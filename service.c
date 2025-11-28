@@ -4,9 +4,10 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/types.h>
 #include <sched.h>
 #include <dirent.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 // Confined, will add marks
 char *confined_dirs[] = {
@@ -66,11 +67,15 @@ static void file_action(char* dir, struct dirent *ep, enum action_type action)
                     if(fnmatch(*m_ext, ep->d_name, 0)) {
                         //create mark
                         char* fmark_name = make_full_path(dir, ep->d_name, file_mark_ext);
-			FILE* fmark = fopen(fmark_name, "w");
-                        fprintf(fmark, "00000004 00000004");
-                        fclose(fmark);
-			printf("Marked '%s%s' by '%s'", dir, ep->d_name, fmark_name);
-                        syslog(LOG_DEBUG, "Marked '%s/%s' by '%s'", dir, ep->d_name, fmark_name);
+                        struct stat filestat;
+                        if (stat(fmark_name, &filestat) < 0) {
+			                FILE* fmark = fopen(fmark_name, "w");
+                            fprintf(fmark, "00000004 00000004");
+                            fclose(fmark);
+
+                			printf("Marked '%s%s' by '%s'", dir, ep->d_name, fmark_name);
+                            syslog(LOG_DEBUG, "Marked '%s/%s' by '%s'", dir, ep->d_name, fmark_name);
+                        }
                         free(fmark_name);
                     }
 		break;
