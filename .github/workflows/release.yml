@@ -1,0 +1,61 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build and test
+        run: |
+          make clean
+          make check
+
+      - name: Package binary
+        run: |
+          mkdir -p dist
+          cp service-mvp README.md dist/
+          tar -C dist -czf service-mvp-linux-x86_64.tar.gz service-mvp README.md
+          sha256sum service-mvp-linux-x86_64.tar.gz > service-mvp-linux-x86_64.tar.gz.sha256
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: service-mvp-linux-x86_64
+          path: |
+            service-mvp-linux-x86_64.tar.gz
+            service-mvp-linux-x86_64.tar.gz.sha256
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" \
+              service-mvp-linux-x86_64.tar.gz \
+              service-mvp-linux-x86_64.tar.gz.sha256 \
+              --repo "${GITHUB_REPOSITORY}" \
+              --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" \
+              service-mvp-linux-x86_64.tar.gz \
+              service-mvp-linux-x86_64.tar.gz.sha256 \
+              --repo "${GITHUB_REPOSITORY}" \
+              --title "${GITHUB_REF_NAME}" \
+              --generate-notes
+          fi

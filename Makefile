@@ -1,23 +1,25 @@
-DEBUG=y
-ifdef DEBUG
-	CFLAGS=-g -DDEBUG
-else
-	CFLAGS=-g
-endif
+CC ?= gcc
+TARGET := service-mvp
+SOURCES := service.c
+OBJECTS := $(SOURCES:.c=.o)
 
-LDFLAGS=-lc
+CPPFLAGS ?=
+CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic -Werror -O2
+LDFLAGS ?=
+LDLIBS ?=
 
-SOURCES=service.c
-OBJECTS=$(SOURCES:%.c=%.o)
-TARGET=mephisto
+.PHONY: all clean check
 
-%.o: %.c
-	gcc -c -o $@ $(CFLAGS) $<
+all: $(TARGET)
 
 $(TARGET): $(OBJECTS)
-	gcc -o $(TARGET) $(LDFLAGS) $(OBJECTS)
+	$(CC) $(LDFLAGS) -o $@ $(OBJECTS) $(LDLIBS)
+
+%.o: %.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
 
 clean:
 	rm -f $(OBJECTS) $(TARGET)
 
-.PHONY: clean $(TARGET)
+check: all
+	sh tests/smoke.sh
